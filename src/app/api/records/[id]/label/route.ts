@@ -9,9 +9,9 @@ export async function GET(
 ) {
   const { id } = await params;
   const recordId = Number(id);
-  const record = getRecord(recordId);
+  const record = await getRecord(recordId);
   if (!record) return NextResponse.json({ error: "not found" }, { status: 404 });
-  const tracks = getTracksForRecord(recordId);
+  const tracks = await getTracksForRecord(recordId);
 
   const buffer = await renderToBuffer(LabelDocument({ record, tracks }));
   const filename = `${record.artist} - ${record.album}.pdf`.replace(/[^\w\-. ]/g, "_");

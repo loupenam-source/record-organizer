@@ -5,16 +5,26 @@ Catalog vinyl records with track-level notes (genre, vocals/instrumental, when-t
 ## Stack
 - Next.js 15 (App Router) + TypeScript
 - Tailwind CSS
-- SQLite via `better-sqlite3` (local file at `./data.db`)
+- Postgres via `@neondatabase/serverless` (Neon, provisioned through Vercel)
 - `@react-pdf/renderer` for PDF labels
 - `@tanstack/react-table` for the dashboard grid
 
 ## Run locally
+Requires `DATABASE_URL` in `.env.development.local` (pull it from Vercel):
 ```bash
+npm install -g vercel
+vercel link
+vercel env pull .env.development.local
 npm install
 npm run dev
 ```
-Open http://localhost:3000. The SQLite database is created automatically on first run.
+Open http://localhost:3000. Schema is created automatically on first query.
+
+## Migrating from SQLite (one-time)
+```bash
+node scripts/export-sqlite.mjs > backup.json
+node --env-file=.env.development.local scripts/import-postgres.mjs backup.json
+```
 
 ## Features
 - Dashboard: filterable/sortable track list (search, genre, vocals/instrumental, when-to-play)
@@ -24,7 +34,6 @@ Open http://localhost:3000. The SQLite database is created automatically on firs
 
 ## Roadmap
 - SMS entry flow (Twilio + Claude API) — conversational track entry on the go
-- Deploy to Vercel + migrate SQLite → Postgres
 - Discogs lookup for record metadata
 
 ## Data model

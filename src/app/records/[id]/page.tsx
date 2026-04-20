@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getRecord, getTracksForRecord } from "@/lib/queries";
+import { getNextPosition, getRecord, getTracksForRecord } from "@/lib/queries";
+import { AddTracksForm } from "./add-tracks-form";
+import { TrackCard } from "./track-card";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +13,13 @@ export default async function RecordDetailPage({
 }) {
   const { id } = await params;
   const recordId = Number(id);
-  const record = getRecord(recordId);
+  const record = await getRecord(recordId);
   if (!record) notFound();
-  const tracks = getTracksForRecord(recordId);
+  const [tracks, nextPositionA, nextPositionB] = await Promise.all([
+    getTracksForRecord(recordId),
+    getNextPosition(recordId, "A"),
+    getNextPosition(recordId, "B"),
+  ]);
   const sideA = tracks.filter((t) => t.side === "A");
   const sideB = tracks.filter((t) => t.side === "B");
 
@@ -51,39 +57,18 @@ export default async function RecordDetailPage({
                 <h2 className="font-bold text-sm mb-2">SIDE {side}</h2>
                 <div className="space-y-2">
                   {t.map((tr) => (
-                    <div
-                      key={tr.id}
-                      className="border border-zinc-200 dark:border-zinc-800 rounded-md p-3 bg-white dark:bg-zinc-950"
-                    >
-                      <div className="flex items-baseline gap-3">
-                        <span className="font-mono text-xs text-zinc-500">
-                          {tr.side}
-                          {tr.position}
-                        </span>
-                        <span className="font-semibold">{tr.title}</span>
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-1 flex gap-2 flex-wrap">
-                        {tr.genre ? <span>{tr.genre}</span> : null}
-                        <span>·</span>
-                        <span>{tr.vocals ? "vocals" : "instrumental"}</span>
-                        {tr.when_to_play ? (
-                          <>
-                            <span>·</span>
-                            <span>{tr.when_to_play}</span>
-                          </>
-                        ) : null}
-                      </div>
-                      {tr.description ? (
-                        <p className="text-sm mt-2 text-zinc-700 dark:text-zinc-300 italic">
-                          {tr.description}
-                        </p>
-                      ) : null}
-                    </div>
+                    <TrackCard key={tr.id} track={tr} />
                   ))}
                 </div>
               </section>
             ) : null
         )}
+
+        <AddTracksForm
+          recordId={record.id}
+          nextPositionA={nextPositionA}
+          nextPositionB={nextPositionB}
+        />
       </main>
     </div>
   );

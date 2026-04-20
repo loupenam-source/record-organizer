@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createRecordWithTracks, listRecords, type NewRecord } from "@/lib/queries";
 
 export async function GET() {
-  return NextResponse.json(listRecords());
+  return NextResponse.json(await listRecords());
 }
 
 export async function POST(req: Request) {
@@ -10,6 +10,6 @@ export async function POST(req: Request) {
   if (!body.artist || !body.album || !Array.isArray(body.tracks)) {
     return NextResponse.json({ error: "artist, album, tracks required" }, { status: 400 });
   }
-  const id = createRecordWithTracks(body);
+  const id = await createRecordWithTracks(body);
   return NextResponse.json({ id }, { status: 201 });
 }

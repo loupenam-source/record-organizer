@@ -1,45 +1,52 @@
-import Database from "better-sqlite3";
-import path from "node:path";
+import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 
-const dbPath = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data.db");
+type Sql = NeonQueryFunction<false, false>;
 
-let _db: Database.Database | null = null;
+let _sql: Sql | null = null;
+let _initialized = false;
 
-export function getDb(): Database.Database {
-  if (_db) return _db;
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+export function getSql(): Sql {
+  if (_sql) return _sql;
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL is not set. For local dev, run `vercel env pull .env.development.local`."
+    );
+  }
+  _sql = neon(url);
+  return _sql;
+}
 
-  db.exec(`
+export async function ensureSchema(): Promise<void> {
+  if (_initialized) return;
+  const sql = getSql();
+  await sql`
     CREATE TABLE IF NOT EXISTS records (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       artist TEXT NOT NULL,
       album TEXT NOT NULL,
       year INTEGER,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS tracks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       record_id INTEGER NOT NULL REFERENCES records(id) ON DELETE CASCADE,
       side TEXT NOT NULL CHECK (side IN ('A','B')),
       position INTEGER NOT NULL,
       title TEXT NOT NULL,
       genre TEXT,
-      vocals INTEGER NOT NULL DEFAULT 0,
+      vocals BOOLEAN NOT NULL DEFAULT FALSE,
       when_to_play TEXT,
       description TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (record_id, side, position)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_tracks_record ON tracks(record_id);
-    CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
-  `);
-
-  _db = db;
-  return db;
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_tracks_record ON tracks(record_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre)`;
+  _initialized = true;
 }
 
 export type RecordRow = {
@@ -57,7 +64,7 @@ export type TrackRow = {
   position: number;
   title: string;
   genre: string | null;
-  vocals: 0 | 1;
+  vocals: boolean;
   when_to_play: string | null;
   description: string | null;
   created_at: string;

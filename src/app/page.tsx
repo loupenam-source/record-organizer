@@ -4,9 +4,11 @@ import { TracksTable } from "./tracks-table";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const tracks = listAllTracks();
-  const records = listRecords();
+export default async function Home() {
+  const [tracks, records] = await Promise.all([
+    listAllTracks(),
+    listRecords(),
+  ]);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100">

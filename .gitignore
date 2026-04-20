@@ -36,11 +36,14 @@ yarn-error.log*
 # vercel
 .vercel
 
-# local sqlite database
+# local sqlite database (legacy, pre-Postgres migration)
 /data.db
 /data.db-journal
 /data.db-wal
 /data.db-shm
+
+# migration backup
+/backup.json
 
 # typescript
 *.tsbuildinfo

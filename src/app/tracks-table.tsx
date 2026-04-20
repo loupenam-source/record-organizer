@@ -59,15 +59,8 @@ export function TracksTable({ tracks }: { tracks: TrackWithRecord[] }) {
   const columns = useMemo<ColumnDef<TrackWithRecord>[]>(
     () => [
       {
-        accessorFn: (r) => `${r.side}${r.position}`,
-        id: "sidepos",
-        header: "Side",
-        cell: (c) => <span className="font-mono text-xs">{c.getValue<string>()}</span>,
-        size: 60,
-      },
-      {
-        accessorKey: "artist",
-        header: "Artist",
+        accessorKey: "album",
+        header: "Album",
         cell: (c) => (
           <Link
             href={`/records/${c.row.original.record_id}`}
@@ -77,8 +70,15 @@ export function TracksTable({ tracks }: { tracks: TrackWithRecord[] }) {
           </Link>
         ),
       },
-      { accessorKey: "album", header: "Album" },
+      { accessorKey: "artist", header: "Artist" },
       { accessorKey: "title", header: "Track" },
+      {
+        accessorFn: (r) => `${r.side}${r.position}`,
+        id: "sidepos",
+        header: "Side",
+        cell: (c) => <span className="font-mono text-xs">{c.getValue<string>()}</span>,
+        size: 60,
+      },
       {
         accessorKey: "genre",
         header: "Genre",
@@ -87,7 +87,7 @@ export function TracksTable({ tracks }: { tracks: TrackWithRecord[] }) {
       {
         accessorKey: "vocals",
         header: "Type",
-        cell: (c) => (c.getValue<number>() ? "vocals" : "instrumental"),
+        cell: (c) => (c.getValue<boolean>() ? "vocals" : "instrumental"),
       },
       {
         accessorKey: "when_to_play",

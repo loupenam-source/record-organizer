@@ -7,9 +7,9 @@ export async function GET(
 ) {
   const { id } = await params;
   const recordId = Number(id);
-  const record = getRecord(recordId);
+  const record = await getRecord(recordId);
   if (!record) return NextResponse.json({ error: "not found" }, { status: 404 });
-  const tracks = getTracksForRecord(recordId);
+  const tracks = await getTracksForRecord(recordId);
   return NextResponse.json({ record, tracks });
 }
 
@@ -18,6 +18,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  deleteRecord(Number(id));
+  await deleteRecord(Number(id));
   return NextResponse.json({ ok: true });
 }

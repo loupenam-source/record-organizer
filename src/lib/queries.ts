@@ -1,34 +1,43 @@
-import { getDb, type RecordRow, type TrackRow, type TrackWithRecord } from "./db";
+import {
+  ensureSchema,
+  getSql,
+  type RecordRow,
+  type TrackRow,
+  type TrackWithRecord,
+} from "./db";
 
-export function listRecords(): RecordRow[] {
-  return getDb()
-    .prepare("SELECT * FROM records ORDER BY created_at DESC")
-    .all() as RecordRow[];
+export async function listRecords(): Promise<RecordRow[]> {
+  await ensureSchema();
+  const rows = await getSql()`
+    SELECT * FROM records ORDER BY created_at DESC
+  `;
+  return rows as RecordRow[];
 }
 
-export function getRecord(id: number): RecordRow | undefined {
-  return getDb()
-    .prepare("SELECT * FROM records WHERE id = ?")
-    .get(id) as RecordRow | undefined;
+export async function getRecord(id: number): Promise<RecordRow | undefined> {
+  await ensureSchema();
+  const rows = await getSql()`SELECT * FROM records WHERE id = ${id}`;
+  return (rows[0] as RecordRow | undefined) ?? undefined;
 }
 
-export function getTracksForRecord(recordId: number): TrackRow[] {
-  return getDb()
-    .prepare(
-      "SELECT * FROM tracks WHERE record_id = ? ORDER BY side, position"
-    )
-    .all(recordId) as TrackRow[];
+export async function getTracksForRecord(recordId: number): Promise<TrackRow[]> {
+  await ensureSchema();
+  const rows = await getSql()`
+    SELECT * FROM tracks WHERE record_id = ${recordId}
+    ORDER BY side, position
+  `;
+  return rows as TrackRow[];
 }
 
-export function listAllTracks(): TrackWithRecord[] {
-  return getDb()
-    .prepare(
-      `SELECT t.*, r.artist, r.album
-       FROM tracks t
-       JOIN records r ON r.id = t.record_id
-       ORDER BY r.artist, r.album, t.side, t.position`
-    )
-    .all() as TrackWithRecord[];
+export async function listAllTracks(): Promise<TrackWithRecord[]> {
+  await ensureSchema();
+  const rows = await getSql()`
+    SELECT t.*, r.artist, r.album
+    FROM tracks t
+    JOIN records r ON r.id = t.record_id
+    ORDER BY r.artist, r.album, t.side, t.position
+  `;
+  return rows as TrackWithRecord[];
 }
 
 export type NewTrack = {
@@ -48,53 +57,113 @@ export type NewRecord = {
   tracks: NewTrack[];
 };
 
-export function createRecordWithTracks(input: NewRecord): number {
-  const db = getDb();
-  const tx = db.transaction((data: NewRecord) => {
-    const recordResult = db
-      .prepare(
-        "INSERT INTO records (artist, album, year) VALUES (?, ?, ?)"
-      )
-      .run(data.artist, data.album, data.year ?? null);
-    const recordId = Number(recordResult.lastInsertRowid);
-    const insertTrack = db.prepare(
-      `INSERT INTO tracks (record_id, side, position, title, genre, vocals, when_to_play, description)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    );
-    for (const t of data.tracks) {
-      insertTrack.run(
-        recordId,
-        t.side,
-        t.position,
-        t.title,
-        t.genre ?? null,
-        t.vocals ? 1 : 0,
-        t.when_to_play ?? null,
-        t.description ?? null
-      );
-    }
-    return recordId;
-  });
-  return tx(input);
-}
-
-export function updateTrack(
-  id: number,
-  patch: Partial<Omit<TrackRow, "id" | "record_id" | "created_at">>
-): void {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-  for (const [key, value] of Object.entries(patch)) {
-    fields.push(`${key} = ?`);
-    values.push(value);
+export async function createRecordWithTracks(input: NewRecord): Promise<number> {
+  await ensureSchema();
+  const sql = getSql();
+  const recRows = await sql`
+    INSERT INTO records (artist, album, year)
+    VALUES (${input.artist}, ${input.album}, ${input.year ?? null})
+    RETURNING id
+  `;
+  const recordId = Number((recRows[0] as { id: number }).id);
+  for (const t of input.tracks) {
+    await sql`
+      INSERT INTO tracks
+        (record_id, side, position, title, genre, vocals, when_to_play, description)
+      VALUES
+        (${recordId}, ${t.side}, ${t.position}, ${t.title},
+         ${t.genre ?? null}, ${t.vocals}, ${t.when_to_play ?? null},
+         ${t.description ?? null})
+    `;
   }
-  if (fields.length === 0) return;
-  values.push(id);
-  getDb()
-    .prepare(`UPDATE tracks SET ${fields.join(", ")} WHERE id = ?`)
-    .run(...values);
+  return recordId;
 }
 
-export function deleteRecord(id: number): void {
-  getDb().prepare("DELETE FROM records WHERE id = ?").run(id);
+export async function addTracksToRecord(
+  recordId: number,
+  tracks: NewTrack[]
+): Promise<void> {
+  await ensureSchema();
+  const sql = getSql();
+  for (const t of tracks) {
+    await sql`
+      INSERT INTO tracks
+        (record_id, side, position, title, genre, vocals, when_to_play, description)
+      VALUES
+        (${recordId}, ${t.side}, ${t.position}, ${t.title},
+         ${t.genre ?? null}, ${t.vocals}, ${t.when_to_play ?? null},
+         ${t.description ?? null})
+    `;
+  }
+}
+
+export async function getNextPosition(
+  recordId: number,
+  side: "A" | "B"
+): Promise<number> {
+  await ensureSchema();
+  const rows = await getSql()`
+    SELECT COALESCE(MAX(position), 0) AS max_pos
+    FROM tracks WHERE record_id = ${recordId} AND side = ${side}
+  `;
+  const maxPos = Number((rows[0] as { max_pos: number | string }).max_pos);
+  return maxPos + 1;
+}
+
+const UPDATABLE_TRACK_FIELDS = [
+  "side",
+  "position",
+  "title",
+  "genre",
+  "vocals",
+  "when_to_play",
+  "description",
+] as const;
+
+type UpdatableField = (typeof UPDATABLE_TRACK_FIELDS)[number];
+
+export async function updateTrack(
+  id: number,
+  patch: Partial<Pick<TrackRow, UpdatableField>>
+): Promise<void> {
+  await ensureSchema();
+  const sql = getSql();
+  for (const key of UPDATABLE_TRACK_FIELDS) {
+    if (!(key in patch)) continue;
+    const value = patch[key] ?? null;
+    // column name is whitelisted above, so interpolation is safe
+    switch (key) {
+      case "side":
+        await sql`UPDATE tracks SET side = ${value} WHERE id = ${id}`;
+        break;
+      case "position":
+        await sql`UPDATE tracks SET position = ${value} WHERE id = ${id}`;
+        break;
+      case "title":
+        await sql`UPDATE tracks SET title = ${value} WHERE id = ${id}`;
+        break;
+      case "genre":
+        await sql`UPDATE tracks SET genre = ${value} WHERE id = ${id}`;
+        break;
+      case "vocals":
+        await sql`UPDATE tracks SET vocals = ${value} WHERE id = ${id}`;
+        break;
+      case "when_to_play":
+        await sql`UPDATE tracks SET when_to_play = ${value} WHERE id = ${id}`;
+        break;
+      case "description":
+        await sql`UPDATE tracks SET description = ${value} WHERE id = ${id}`;
+        break;
+    }
+  }
+}
+
+export async function deleteRecord(id: number): Promise<void> {
+  await ensureSchema();
+  await getSql()`DELETE FROM records WHERE id = ${id}`;
+}
+
+export async function deleteTrack(id: number): Promise<void> {
+  await ensureSchema();
+  await getSql()`DELETE FROM tracks WHERE id = ${id}`;
 }
