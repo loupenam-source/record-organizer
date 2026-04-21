@@ -10,15 +10,16 @@ if (!path) {
   console.error("Usage: node scripts/import-postgres.mjs <backup.json>");
   process.exit(1);
 }
-if (!process.env.DATABASE_URL) {
+const connectionUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
+if (!connectionUrl) {
   console.error(
-    "DATABASE_URL not set. Run: node --env-file=.env.development.local scripts/import-postgres.mjs backup.json"
+    "DATABASE_URL / POSTGRES_URL not set. Run: node --env-file=.env.development.local scripts/import-postgres.mjs backup.json"
   );
   process.exit(1);
 }
 
 const data = JSON.parse(readFileSync(path, "utf8"));
-const sql = neon(process.env.DATABASE_URL);
+const sql = neon(connectionUrl);
 
 // Ensure schema exists.
 await sql`
