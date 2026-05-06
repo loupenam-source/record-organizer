@@ -3,6 +3,7 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { RecordRow, TrackRow } from "./db";
@@ -18,6 +19,18 @@ const styles = StyleSheet.create({
     borderBottom: "1pt solid #111",
     paddingBottom: 6,
     marginBottom: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerText: {
+    flex: 1,
+  },
+  logo: {
+    width: 50,
+    height: 50,
+    objectFit: "contain",
+    marginLeft: 6,
   },
   artist: {
     fontSize: 12,
@@ -48,7 +61,7 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
   },
   trackMeta: {
-    fontSize: 7,
+    fontSize: 8,
     color: "#444",
     marginTop: 1,
   },
@@ -65,9 +78,11 @@ const PAGE = { width: 4 * PT_PER_INCH, height: 6 * PT_PER_INCH };
 export function LabelDocument({
   record,
   tracks,
+  logo,
 }: {
   record: RecordRow;
   tracks: TrackRow[];
+  logo?: Buffer;
 }) {
   const sideA = tracks.filter((t) => t.side === "A");
   const sideB = tracks.filter((t) => t.side === "B");
@@ -76,9 +91,12 @@ export function LabelDocument({
     <Document>
       <Page size={PAGE} style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.artist}>{record.artist}</Text>
-          <Text style={styles.album}>{record.album}</Text>
-          {record.year ? <Text style={styles.year}>{record.year}</Text> : null}
+          <View style={styles.headerText}>
+            <Text style={styles.artist}>{record.artist}</Text>
+            <Text style={styles.album}>{record.album}</Text>
+            {record.year ? <Text style={styles.year}>{record.year}</Text> : null}
+          </View>
+          {logo ? <Image src={logo} style={styles.logo} /> : null}
         </View>
 
         {sideA.length > 0 && (

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getRecord, getTracksForRecord } from "@/lib/queries";
 import { LabelDocument } from "@/lib/label-pdf";
@@ -13,7 +15,11 @@ export async function GET(
   if (!record) return NextResponse.json({ error: "not found" }, { status: 404 });
   const tracks = await getTracksForRecord(recordId);
 
-  const buffer = await renderToBuffer(LabelDocument({ record, tracks }));
+  const logo = await readFile(
+    path.join(process.cwd(), "public", "fieldtest-logo.png")
+  );
+
+  const buffer = await renderToBuffer(LabelDocument({ record, tracks, logo }));
   const filename = `${record.artist} - ${record.album}.pdf`.replace(/[^\w\-. ]/g, "_");
 
   return new Response(new Uint8Array(buffer), {
