@@ -17,7 +17,7 @@ const styles = StyleSheet.create({
   },
   header: {
     borderBottom: "1pt solid #111",
-    paddingBottom: 6,
+    paddingBottom: 16,
     marginBottom: 8,
     flexDirection: "row",
     justifyContent: "space-between",
