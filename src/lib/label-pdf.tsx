@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
   page: {
     padding: 18,
     fontFamily: "Helvetica",
-    fontSize: 9,
+    fontSize: 11,
     color: "#111",
   },
   header: {
@@ -33,20 +33,20 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   artist: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Helvetica-Bold",
   },
   album: {
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 2,
   },
   year: {
-    fontSize: 8,
+    fontSize: 10,
     color: "#555",
     marginTop: 2,
   },
   sideHeader: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: "Helvetica-Bold",
     marginTop: 6,
     marginBottom: 3,
@@ -57,16 +57,16 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   trackTitle: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: "Helvetica-Bold",
   },
   trackMeta: {
-    fontSize: 8,
+    fontSize: 10,
     color: "#444",
     marginTop: 1,
   },
   trackDesc: {
-    fontSize: 8,
+    fontSize: 10,
     marginTop: 1,
     fontStyle: "italic",
   },
