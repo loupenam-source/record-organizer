@@ -73,4 +73,5 @@ export type TrackRow = {
 export type TrackWithRecord = TrackRow & {
   artist: string;
   album: string;
+  record_created_at: string;
 };

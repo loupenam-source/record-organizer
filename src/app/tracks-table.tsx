@@ -103,6 +103,19 @@ export function TracksTable({ tracks }: { tracks: TrackWithRecord[] }) {
           </span>
         ),
       },
+      {
+        accessorKey: "record_created_at",
+        header: "Added",
+        sortingFn: "datetime",
+        cell: (c) => {
+          const v = c.getValue<string>();
+          return (
+            <span className="text-xs text-zinc-500 whitespace-nowrap">
+              {new Date(v).toLocaleDateString()}
+            </span>
+          );
+        },
+      },
     ],
     []
   );

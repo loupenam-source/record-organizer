@@ -32,7 +32,7 @@ export async function getTracksForRecord(recordId: number): Promise<TrackRow[]> 
 export async function listAllTracks(): Promise<TrackWithRecord[]> {
   await ensureSchema();
   const rows = await getSql()`
-    SELECT t.*, r.artist, r.album
+    SELECT t.*, r.artist, r.album, r.created_at AS record_created_at
     FROM tracks t
     JOIN records r ON r.id = t.record_id
     ORDER BY r.artist, r.album, t.side, t.position
