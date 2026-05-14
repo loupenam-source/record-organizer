@@ -26,6 +26,13 @@ function emptyTrack(side: "A" | "B", position: number): TrackInput {
   };
 }
 
+type DiscogsImportResponse = {
+  artist: string;
+  album: string;
+  year: number | null;
+  tracks: { side: "A" | "B"; position: number; title: string }[];
+};
+
 export function NewRecordForm() {
   const router = useRouter();
   const [artist, setArtist] = useState("");
@@ -34,6 +41,40 @@ export function NewRecordForm() {
   const [tracks, setTracks] = useState<TrackInput[]>([emptyTrack("A", 1)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [discogsUrl, setDiscogsUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const importFromDiscogs = async () => {
+    if (!discogsUrl.trim()) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const res = await fetch(
+        `/api/discogs/release?url=${encodeURIComponent(discogsUrl.trim())}`
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Import failed");
+      }
+      const d = data as DiscogsImportResponse;
+      setArtist(d.artist);
+      setAlbum(d.album);
+      setYear(d.year ? String(d.year) : "");
+      if (d.tracks.length > 0) {
+        setTracks(
+          d.tracks.map((t) => ({
+            ...emptyTrack(t.side, t.position),
+            title: t.title,
+          }))
+        );
+      }
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const updateTrack = (index: number, patch: Partial<TrackInput>) => {
     setTracks((prev) =>
@@ -91,6 +132,35 @@ export function NewRecordForm() {
 
   return (
     <form onSubmit={submit} className="space-y-6">
+      <div className="border border-zinc-200 dark:border-zinc-800 rounded-md p-3 bg-white dark:bg-zinc-950 space-y-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Import from Discogs
+          </span>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              placeholder="https://www.discogs.com/release/249504-..."
+              value={discogsUrl}
+              onChange={(e) => setDiscogsUrl(e.target.value)}
+              className={`${inputClass} flex-1`}
+            />
+            <button
+              type="button"
+              onClick={importFromDiscogs}
+              disabled={importing || !discogsUrl.trim()}
+              className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md disabled:opacity-50"
+            >
+              {importing ? "Importing..." : "Import"}
+            </button>
+          </div>
+        </label>
+        {importError && <p className="text-red-500 text-sm">{importError}</p>}
+        <p className="text-xs text-zinc-500">
+          Paste a Discogs release URL to pre-fill artist, album, year, and tracks.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Field label="Artist">
           <input
