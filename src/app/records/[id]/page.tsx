@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getNextPosition, getRecord, getTracksForRecord } from "@/lib/queries";
+import { getCurrentUser } from "@/lib/auth";
 import { AddTracksForm } from "./add-tracks-form";
 import { TrackCard } from "./track-card";
 
@@ -11,10 +12,13 @@ export default async function RecordDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const current = await getCurrentUser();
+  if (!current) redirect("/signin");
   const { id } = await params;
   const recordId = Number(id);
   const record = await getRecord(recordId);
   if (!record) notFound();
+  const isOwn = record.user_id === current.id;
   const [tracks, nextPositionA, nextPositionB] = await Promise.all([
     getTracksForRecord(recordId),
     getNextPosition(recordId, "A"),
@@ -57,18 +61,20 @@ export default async function RecordDetailPage({
                 <h2 className="font-bold text-sm mb-2">SIDE {side}</h2>
                 <div className="space-y-2">
                   {t.map((tr) => (
-                    <TrackCard key={tr.id} track={tr} />
+                    <TrackCard key={tr.id} track={tr} readOnly={!isOwn} />
                   ))}
                 </div>
               </section>
             ) : null
         )}
 
-        <AddTracksForm
-          recordId={record.id}
-          nextPositionA={nextPositionA}
-          nextPositionB={nextPositionB}
-        />
+        {isOwn ? (
+          <AddTracksForm
+            recordId={record.id}
+            nextPositionA={nextPositionA}
+            nextPositionB={nextPositionB}
+          />
+        ) : null}
       </main>
     </div>
   );

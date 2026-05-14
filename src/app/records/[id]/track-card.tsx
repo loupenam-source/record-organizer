@@ -4,7 +4,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { TrackRow } from "@/lib/db";
 
-export function TrackCard({ track }: { track: TrackRow }) {
+export function TrackCard({
+  track,
+  readOnly = false,
+}: {
+  track: TrackRow;
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
 
@@ -23,15 +29,17 @@ export function TrackCard({ track }: { track: TrackRow }) {
 
   return (
     <div className="border border-zinc-200 dark:border-zinc-800 rounded-md p-3 bg-white dark:bg-zinc-950 group relative">
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={deleting}
-        aria-label="Delete track"
-        className="absolute top-2 right-2 text-xs text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 disabled:opacity-50 transition-opacity px-2 py-0.5"
-      >
-        {deleting ? "..." : "✕"}
-      </button>
+      {readOnly ? null : (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label="Delete track"
+          className="absolute top-2 right-2 text-xs text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 disabled:opacity-50 transition-opacity px-2 py-0.5"
+        >
+          {deleting ? "..." : "✕"}
+        </button>
+      )}
       <div className="flex items-baseline gap-3">
         <span className="font-mono text-xs text-zinc-500">
           {track.side}

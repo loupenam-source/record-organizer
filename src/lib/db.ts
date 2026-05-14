@@ -21,6 +21,14 @@ export async function ensureSchema(): Promise<void> {
   if (_initialized) return;
   const sql = getSql();
   await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS records (
       id SERIAL PRIMARY KEY,
       artist TEXT NOT NULL,
@@ -46,11 +54,84 @@ export async function ensureSchema(): Promise<void> {
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_tracks_record ON tracks(record_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre)`;
+
+  await seedUsers(sql);
+  await addUserIdToRecords(sql);
+
   _initialized = true;
 }
 
+type UserConfig = { username: string; name: string; passcode: string };
+
+function readUserConfig(): UserConfig[] {
+  const raw = process.env.USERS_JSON;
+  if (!raw) {
+    throw new Error(
+      "USERS_JSON is not set. Define users in your .env, e.g. " +
+        `USERS_JSON='[{"username":"lou","name":"Lou","passcode":"changeme"}]'`
+    );
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("USERS_JSON is not valid JSON");
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("USERS_JSON must be a non-empty array");
+  }
+  for (const u of parsed) {
+    if (
+      !u ||
+      typeof u !== "object" ||
+      typeof (u as UserConfig).username !== "string" ||
+      typeof (u as UserConfig).name !== "string" ||
+      typeof (u as UserConfig).passcode !== "string"
+    ) {
+      throw new Error(
+        "Each USERS_JSON entry needs string username, name, and passcode"
+      );
+    }
+  }
+  return parsed as UserConfig[];
+}
+
+export function getUserConfig(): UserConfig[] {
+  return readUserConfig();
+}
+
+async function seedUsers(sql: Sql): Promise<void> {
+  const users = readUserConfig();
+  for (const u of users) {
+    await sql`
+      INSERT INTO users (username, name)
+      VALUES (${u.username}, ${u.name})
+      ON CONFLICT (username) DO UPDATE SET name = EXCLUDED.name
+    `;
+  }
+}
+
+async function addUserIdToRecords(sql: Sql): Promise<void> {
+  await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
+  const rows = await sql`SELECT id FROM users WHERE username = 'lou'`;
+  const lou = rows[0] as { id: number } | undefined;
+  if (lou) {
+    await sql`UPDATE records SET user_id = ${lou.id} WHERE user_id IS NULL`;
+  }
+  await sql`ALTER TABLE records ALTER COLUMN user_id SET NOT NULL`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_records_user ON records(user_id)`;
+}
+
+export type UserRow = {
+  id: number;
+  username: string;
+  name: string;
+  created_at: string;
+};
+
 export type RecordRow = {
   id: number;
+  user_id: number;
   artist: string;
   album: string;
   year: number | null;

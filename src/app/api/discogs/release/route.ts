@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUserOr401 } from "@/lib/auth";
 
 type DiscogsArtist = { name: string };
 type DiscogsTrack = {
@@ -65,6 +66,8 @@ function normalizeTracks(tracklist: DiscogsTrack[] | undefined): ImportedTrack[]
 }
 
 export async function GET(req: Request) {
+  const auth = await requireUserOr401();
+  if (auth.response) return auth.response;
   const { searchParams } = new URL(req.url);
   const input = searchParams.get("url") ?? searchParams.get("id");
   if (!input) {

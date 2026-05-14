@@ -6,10 +6,10 @@ import {
   type TrackWithRecord,
 } from "./db";
 
-export async function listRecords(): Promise<RecordRow[]> {
+export async function listRecords(userId: number): Promise<RecordRow[]> {
   await ensureSchema();
   const rows = await getSql()`
-    SELECT * FROM records ORDER BY created_at DESC
+    SELECT * FROM records WHERE user_id = ${userId} ORDER BY created_at DESC
   `;
   return rows as RecordRow[];
 }
@@ -29,12 +29,13 @@ export async function getTracksForRecord(recordId: number): Promise<TrackRow[]> 
   return rows as TrackRow[];
 }
 
-export async function listAllTracks(): Promise<TrackWithRecord[]> {
+export async function listAllTracks(userId: number): Promise<TrackWithRecord[]> {
   await ensureSchema();
   const rows = await getSql()`
     SELECT t.*, r.artist, r.album, r.created_at AS record_created_at
     FROM tracks t
     JOIN records r ON r.id = t.record_id
+    WHERE r.user_id = ${userId}
     ORDER BY r.artist, r.album, t.side, t.position
   `;
   return rows as TrackWithRecord[];
@@ -57,12 +58,15 @@ export type NewRecord = {
   tracks: NewTrack[];
 };
 
-export async function createRecordWithTracks(input: NewRecord): Promise<number> {
+export async function createRecordWithTracks(
+  userId: number,
+  input: NewRecord
+): Promise<number> {
   await ensureSchema();
   const sql = getSql();
   const recRows = await sql`
-    INSERT INTO records (artist, album, year)
-    VALUES (${input.artist}, ${input.album}, ${input.year ?? null})
+    INSERT INTO records (user_id, artist, album, year)
+    VALUES (${userId}, ${input.artist}, ${input.album}, ${input.year ?? null})
     RETURNING id
   `;
   const recordId = Number((recRows[0] as { id: number }).id);
@@ -95,6 +99,17 @@ export async function addTracksToRecord(
          ${t.description ?? null})
     `;
   }
+}
+
+export async function getTrackOwnerUserId(trackId: number): Promise<number | null> {
+  await ensureSchema();
+  const rows = await getSql()`
+    SELECT r.user_id FROM tracks t
+    JOIN records r ON r.id = t.record_id
+    WHERE t.id = ${trackId}
+  `;
+  const row = rows[0] as { user_id: number } | undefined;
+  return row ? row.user_id : null;
 }
 
 export async function getNextPosition(

@@ -4,15 +4,22 @@ import {
   getRecord,
   type NewTrack,
 } from "@/lib/queries";
+import { requireUserOr401 } from "@/lib/auth";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireUserOr401();
+  if (auth.response) return auth.response;
   const { id } = await params;
   const recordId = Number(id);
-  if (!(await getRecord(recordId))) {
+  const record = await getRecord(recordId);
+  if (!record) {
     return NextResponse.json({ error: "record not found" }, { status: 404 });
+  }
+  if (record.user_id !== auth.user.id) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const body = (await req.json()) as { tracks: NewTrack[] };
   if (!Array.isArray(body.tracks) || body.tracks.length === 0) {
