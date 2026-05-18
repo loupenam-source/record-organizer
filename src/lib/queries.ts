@@ -173,6 +173,33 @@ export async function updateTrack(
   }
 }
 
+const UPDATABLE_RECORD_FIELDS = ["artist", "album", "year"] as const;
+
+type UpdatableRecordField = (typeof UPDATABLE_RECORD_FIELDS)[number];
+
+export async function updateRecord(
+  id: number,
+  patch: Partial<Pick<RecordRow, UpdatableRecordField>>
+): Promise<void> {
+  await ensureSchema();
+  const sql = getSql();
+  for (const key of UPDATABLE_RECORD_FIELDS) {
+    if (!(key in patch)) continue;
+    const value = patch[key] ?? null;
+    switch (key) {
+      case "artist":
+        await sql`UPDATE records SET artist = ${value} WHERE id = ${id}`;
+        break;
+      case "album":
+        await sql`UPDATE records SET album = ${value} WHERE id = ${id}`;
+        break;
+      case "year":
+        await sql`UPDATE records SET year = ${value} WHERE id = ${id}`;
+        break;
+    }
+  }
+}
+
 export async function deleteRecord(id: number): Promise<void> {
   await ensureSchema();
   await getSql()`DELETE FROM records WHERE id = ${id}`;

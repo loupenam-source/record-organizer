@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getNextPosition, getRecord, getTracksForRecord } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
 import { AddTracksForm } from "./add-tracks-form";
+import { RecordHeader } from "./record-header";
 import { TrackCard } from "./track-card";
 
 export const dynamic = "force-dynamic";
@@ -34,12 +35,7 @@ export default async function RecordDetailPage({
           <Link href="/" className="text-xs text-zinc-500 hover:underline">
             ← Back
           </Link>
-          <h1 className="text-xl font-bold">
-            {record.artist} — {record.album}
-          </h1>
-          {record.year ? (
-            <p className="text-xs text-zinc-500">{record.year}</p>
-          ) : null}
+          <RecordHeader record={record} editable={isOwn} />
         </div>
         <div className="flex gap-2">
           <a
