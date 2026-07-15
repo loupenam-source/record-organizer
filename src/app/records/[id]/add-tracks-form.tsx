@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { YoutubeNotes } from "./youtube-notes";
+import { YoutubeNotes } from "../youtube-notes";
 
 type TrackInput = {
   side: "A" | "B";

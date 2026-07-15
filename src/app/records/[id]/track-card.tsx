@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { TrackRow } from "@/lib/db";
-import { YoutubeNotes } from "./youtube-notes";
+import { YoutubeNotes } from "../youtube-notes";
 
 type EditState = {
   side: "A" | "B";
