@@ -3,8 +3,9 @@ import { requireUserOr401 } from "@/lib/auth";
 import { generateTrackNotes, normalizeYoutubeUrl } from "@/lib/gemini";
 import { getNoteExamples } from "@/lib/queries";
 
-// Gemini has to listen to the whole track, which can take a while
-export const maxDuration = 60;
+// Gemini has to listen to the whole track, which can take a while —
+// long tracks were hitting the 60s cap, so use the platform max
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const auth = await requireUserOr401();

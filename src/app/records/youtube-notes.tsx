@@ -24,8 +24,23 @@ export function YoutubeNotes({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: url.trim(), title: trackTitle }),
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error ?? "Failed to generate notes");
+      const text = await res.text();
+      let j: unknown;
+      try {
+        j = JSON.parse(text);
+      } catch {
+        // Vercel returns plain text when the function times out or crashes
+        throw new Error(
+          res.ok
+            ? "Unexpected response from server"
+            : `Server error (${res.status}) — try again in a minute`
+        );
+      }
+      if (!res.ok) {
+        throw new Error(
+          (j as { error?: string }).error ?? "Failed to generate notes"
+        );
+      }
       onResult(j as GeneratedNotes);
       setUrl("");
     } catch (err) {
