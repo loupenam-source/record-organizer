@@ -106,11 +106,21 @@ export async function generateTrackNotes(opts: {
             ],
           },
         ],
-        generationConfig: { responseMimeType: "application/json" },
+        generationConfig: {
+          responseMimeType: "application/json",
+          // we only need the audio — low video resolution cuts token
+          // usage ~4x, which matters on the free-tier quota
+          mediaResolution: "MEDIA_RESOLUTION_LOW",
+        },
       }),
     }
   );
 
+  if (res.status === 429) {
+    throw new Error(
+      "Hit the Gemini free-tier limit — wait a minute and try again (resets daily if it persists)"
+    );
+  }
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     throw new Error(`Gemini returned ${res.status}: ${detail.slice(0, 300)}`);
