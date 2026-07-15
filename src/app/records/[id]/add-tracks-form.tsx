@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { YoutubeNotes } from "./youtube-notes";
 
 type TrackInput = {
   side: "A" | "B";
@@ -205,6 +206,18 @@ export function AddTracksForm({
             value={t.description}
             onChange={(e) => updateTrack(i, { description: e.target.value })}
             className={`${inputClass} w-full min-h-[60px]`}
+          />
+          <YoutubeNotes
+            trackTitle={t.title}
+            onResult={(n) =>
+              updateTrack(i, {
+                title: t.title.trim() || n.title,
+                genre: n.genre,
+                vocals: n.vocals,
+                when_to_play: n.when_to_play,
+                description: n.description,
+              })
+            }
           />
         </div>
       ))}

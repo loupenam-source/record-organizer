@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { TrackRow } from "@/lib/db";
+import { YoutubeNotes } from "./youtube-notes";
 
 type EditState = {
   side: "A" | "B";
@@ -161,6 +162,19 @@ export function TrackCard({
           value={draft.description}
           onChange={(e) => setDraft({ ...draft, description: e.target.value })}
           className={`${inputClass} w-full min-h-[60px]`}
+        />
+        <YoutubeNotes
+          trackTitle={draft.title}
+          onResult={(n) =>
+            setDraft((prev) => ({
+              ...prev,
+              title: prev.title.trim() || n.title,
+              genre: n.genre,
+              vocals: n.vocals,
+              when_to_play: n.when_to_play,
+              description: n.description,
+            }))
+          }
         />
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex gap-2">

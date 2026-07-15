@@ -41,6 +41,22 @@ export async function listAllTracks(userId: number): Promise<TrackWithRecord[]> 
   return rows as TrackWithRecord[];
 }
 
+export async function getNoteExamples(
+  userId: number,
+  limit = 6
+): Promise<TrackRow[]> {
+  await ensureSchema();
+  const rows = await getSql()`
+    SELECT t.* FROM tracks t
+    JOIN records r ON r.id = t.record_id
+    WHERE r.user_id = ${userId}
+      AND t.description IS NOT NULL AND t.description <> ''
+    ORDER BY t.created_at DESC
+    LIMIT ${limit}
+  `;
+  return rows as TrackRow[];
+}
+
 export type NewTrack = {
   side: "A" | "B";
   position: number;
