@@ -18,13 +18,29 @@ const YOUTUBE_HOSTS = new Set([
   "youtu.be",
 ]);
 
-export function isYoutubeUrl(input: string): boolean {
+// Gemini only accepts the canonical watch URL — share links with extra
+// params (?si=, &list=) or other hosts get fetched as HTML and rejected
+export function normalizeYoutubeUrl(input: string): string | null {
+  let url: URL;
   try {
-    const url = new URL(input.trim());
-    return YOUTUBE_HOSTS.has(url.hostname);
+    url = new URL(input.trim());
   } catch {
-    return false;
+    return null;
   }
+  if (!YOUTUBE_HOSTS.has(url.hostname)) return null;
+
+  let videoId: string | null = null;
+  if (url.hostname === "youtu.be") {
+    videoId = url.pathname.slice(1).split("/")[0] || null;
+  } else if (url.pathname === "/watch") {
+    videoId = url.searchParams.get("v");
+  } else {
+    const match = url.pathname.match(/^\/(?:shorts|embed|live|v)\/([^/?]+)/);
+    videoId = match ? match[1] : null;
+  }
+
+  if (!videoId || !/^[\w-]{5,20}$/.test(videoId)) return null;
+  return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
 function formatExample(t: TrackRow): string {

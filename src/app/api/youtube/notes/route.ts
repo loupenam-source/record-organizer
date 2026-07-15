@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserOr401 } from "@/lib/auth";
-import { generateTrackNotes, isYoutubeUrl } from "@/lib/gemini";
+import { generateTrackNotes, normalizeYoutubeUrl } from "@/lib/gemini";
 import { getNoteExamples } from "@/lib/queries";
 
 // Gemini has to listen to the whole track, which can take a while
@@ -17,8 +17,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const url = body.url?.trim();
-  if (!url || !isYoutubeUrl(url)) {
+  const url = body.url ? normalizeYoutubeUrl(body.url) : null;
+  if (!url) {
     return NextResponse.json(
       { error: "Provide a valid YouTube link" },
       { status: 400 }
